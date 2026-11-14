@@ -2,8 +2,12 @@ services:
   app:
     build: .
     restart: unless-stopped
+    # Faqat localhost'da ochiladi — tashqaridan Nginx/Caddy orqali (HTTPS).
+    # Port band bo'lsa, .env da APP_PORT=8790 kabi o'zgartiring.
     ports:
-      - "8787:8787"
+      - "127.0.0.1:${APP_PORT:-8787}:8787"
     env_file: .env
+    environment:
+      PORT: "8787"
     volumes:
       - ./data:/data
