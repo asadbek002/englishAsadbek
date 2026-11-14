@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Icon, useRoute } from './components/ui';
 import { useProgress } from './lib/store';
+import { useVocabVersion } from './lib/vocab';
 import Home from './pages/Home';
 import Path from './pages/Path';
 import { GrammarList, Tenses, TopicPage } from './pages/Grammar';
@@ -49,6 +50,7 @@ function Screen({ r }: { r: string[] }) {
 export default function App() {
   const r = useRoute();
   const p = useProgress();
+  const vocab = useVocabVersion();
 
   useEffect(() => {
     const el = document.documentElement;
@@ -62,7 +64,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <main className="main">{onboarding ? <Welcome /> : <Screen r={r} />}</main>
+      <main className="main" data-vocab={vocab}>{onboarding ? <Welcome /> : <Screen r={r} />}</main>
       {!onboarding && !inQuiz && (
         <nav className="nav" aria-label="Asosiy menyu">
           {NAV.map((n) => (

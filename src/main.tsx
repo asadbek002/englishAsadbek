@@ -3,10 +3,12 @@ import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
 import App from './App';
 import { pullProgress } from './lib/api';
+import { refreshVocab } from './lib/vocab';
 import './styles.css';
 
 registerSW({ immediate: true });
 pullProgress();
+refreshVocab();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

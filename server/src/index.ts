@@ -1,8 +1,8 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import fstatic from '@fastify/static';
-import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import * as z from 'zod/v4';
 import { aiEnabled, config } from './config.ts';
 import { db, type UserRow } from './db.ts';
@@ -26,6 +26,24 @@ function parse<T extends z.ZodType>(schema: T, body: unknown): z.infer<T> {
 
 // ───────────── Health ─────────────
 app.get('/api/health', async () => ({ ok: true, ai: aiEnabled(), providers: config.aiProviders }));
+
+// ───────────── Vocabulary (scripts/vocab.ts yaratadi) ─────────────
+const VOCAB_FILE = join(resolve(dirname(config.dbPath)), 'vocab.json');
+let vocabCache: { mtime: number; etag: string; body: string } | null = null;
+
+app.get('/api/vocab', async (req, reply) => {
+  if (!existsSync(VOCAB_FILE)) return { version: 0, words: [] };
+  const mtime = statSync(VOCAB_FILE).mtimeMs;
+  if (!vocabCache || vocabCache.mtime !== mtime) {
+    const data = JSON.parse(readFileSync(VOCAB_FILE, 'utf8')) as { version: number; words: { en: string; level: string; uz: string; ru: string }[] };
+    // Ixcham format: [en, uz, ru, level]
+    const body = JSON.stringify({ version: data.version, words: data.words.map((w) => [w.en, w.uz, w.ru, w.level]) });
+    vocabCache = { mtime, etag: `"v${data.version}"`, body };
+  }
+  reply.header('etag', vocabCache.etag).header('cache-control', 'no-cache');
+  if (req.headers['if-none-match'] === vocabCache.etag) return reply.code(304).send();
+  return reply.type('application/json').send(vocabCache.body);
+});
 
 // ───────────── Auth ─────────────
 const Credentials = z.object({

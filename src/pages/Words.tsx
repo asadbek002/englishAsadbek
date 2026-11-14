@@ -304,15 +304,17 @@ export function WordList() {
   const p = useProgress();
   const [q, setQ] = useState('');
   const [stage, setStage] = useState<number | 'all'>('all');
-  const list = WORDS.filter((w) => (stage === 'all' || w.stage === stage) &&
+  const [limit, setLimit] = useState(100);
+  const all = WORDS.filter((w) => (stage === 'all' || w.stage === stage) &&
     (!q || [w.en, w.uz, w.ru].some((x) => normalize(x).includes(normalize(q)))));
+  const list = all.slice(0, limit);
   return (
     <div>
       <PageHead title="Lug'at" sub={`${WORDS.length} so'z`} />
-      <input className="input" placeholder="Qidirish: inglizcha, o'zbekcha yoki ruscha" value={q} onChange={(e) => setQ(e.target.value)} />
+      <input className="input" placeholder="Qidirish: inglizcha, o'zbekcha yoki ruscha" value={q} onChange={(e) => { setQ(e.target.value); setLimit(100); }} />
       <div className="row wrap" style={{ gap: 6, margin: '12px 0' }}>
         <button className="chip" aria-pressed={stage === 'all'} onClick={() => setStage('all')}>Hammasi</button>
-        {STAGES.map((s) => <button key={s.id} className="chip" aria-pressed={stage === s.id} onClick={() => setStage(s.id)}>{s.code === '0' ? 'Starter' : s.code}</button>)}
+        {STAGES.map((s) => <button key={s.id} className="chip" aria-pressed={stage === s.id} onClick={() => { setStage(s.id); setLimit(100); }}>{s.code === '0' ? 'Starter' : s.code}</button>)}
       </div>
       <div className="card" style={{ padding: '4px 16px' }}>
         {list.map((w) => {
@@ -331,6 +333,11 @@ export function WordList() {
         })}
         {list.length === 0 && <p className="muted">Hech narsa topilmadi.</p>}
       </div>
+      {all.length > list.length && (
+        <button className="btn ghost block" style={{ marginTop: 12 }} onClick={() => setLimit(limit + 200)}>
+          Yana ko'rsatish ({all.length - list.length} ta qoldi)
+        </button>
+      )}
     </div>
   );
 }

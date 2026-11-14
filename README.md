@@ -6,7 +6,7 @@ Ingliz tilini o'zbek tilida **0 dan IELTS 8.0 gacha** o'rganish uchun PWA (telef
 - **Daraja testi** — A1…C2, har darajada 6 savol. Blokda ≥4/6 → keyingi daraja. Natijaga qarab boshlanish bosqichi belgilanadi.
 - **O'quv yo'li** — 7 bosqich (Starter, A1, A2, B1, B2, C1, C2). Darslar ≥80% → bosqich imtihoni ≥80% → keyingi bosqich.
 - **Grammatika** — 36 mavzu, tushuntirishlar **rus tilida**, misollar, mashqlar, 12 zamon jadvali.
-- **So'zlar** — 210 so'z (EN ↔ UZ ↔ RU), 5 yo'nalish, 3 rejim (test, kartochka, yozish), Leitner spaced repetition, talaffuz.
+- **So'zlar** — A1 dan C2 gacha **8600+ so'z** (CEFR-J + Octanove ro'yxatlari), EN → UZ·RU va teskari, 3 rejim (test, kartochka, yozish), Leitner spaced repetition, talaffuz.
 - **Tinglash** — diktant (so'zma-so'z xato tahlili).
 - **IELTS markazi** — tuzilma, mezonlar; **Writing va Speaking'ni AI baholaydi** (Gemini yoki Claude): band, mezonlar, xatolar (ruscha izoh), yaxshilangan variant.
 - **AI ustoz** — istalgan savolga javob.
@@ -65,3 +65,11 @@ yoki javob noto'g'ri formatda kelsa, o'sha so'rov avtomatik **Claude**ga yuboril
 `x-ai-provider` sarlavhasida qaytariladi va server logida ko'rinadi.
 
 Eslatma: Gemini tekin tarifida yuborilgan matnlar Google tomonidan mahsulotni yaxshilash uchun ishlatiladi.
+
+## Lug'atni to'ldirish (8600+ so'z tarjimasi)
+So'zlar ro'yxati `server/vocab/cefr-words.tsv` da (manbalar: `server/vocab/SOURCES.md`). O'zbekcha va ruscha tarjimalarni
+AI bir marta yaratadi va `data/vocab.json` ga yozadi:
+```bash
+docker compose exec -T app node --experimental-strip-types --no-warnings scripts/vocab.ts
+```
+To'xtab qolsa (masalan, tekin limit tugasa) — qayta ishga tushiring, tayyorlari saqlanadi. Ilova yangi lug'atni avtomatik yuklab oladi.

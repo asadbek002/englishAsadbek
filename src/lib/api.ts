@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { getProgress, onChange, replaceProgress, type Progress } from './store';
 
 /** Backend manzili. Bir xil domenda bo'lsa bo'sh qoldiring; aks holda .env da VITE_API_URL. */
-const API = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? '';
+export const API = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? '';
 
 export interface User { id: number; username: string; name: string; createdAt: number }
 interface Auth { token: string; user: User }

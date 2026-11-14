@@ -15,6 +15,8 @@ ENV NODE_ENV=production PORT=8787 DB_PATH=/data/app.db STATIC_DIR=/app/dist
 COPY server/package.json server/package-lock.json ./
 RUN npm ci --omit=dev
 COPY server/src ./src
+COPY server/scripts ./scripts
+COPY server/vocab ./vocab
 COPY --from=web /web/dist /app/dist
 VOLUME /data
 EXPOSE 8787

@@ -3,14 +3,15 @@ import * as z from 'zod/v4';
 import { config } from '../config.ts';
 import { ProviderError, type AiProvider, type AiTask } from './types.ts';
 
-const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY ?? '' });
+let client: GoogleGenAI | null = null;
+const getClient = () => (client ??= new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY ?? '' }));
 
 const toContents = (task: AiTask): Content[] =>
   task.messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
 
 async function generate(task: AiTask, json?: unknown): Promise<string> {
   try {
-    const res = await client.models.generateContent({
+    const res = await getClient().models.generateContent({
       model: config.geminiModel,
       contents: toContents(task),
       config: {
@@ -25,7 +26,8 @@ async function generate(task: AiTask, json?: unknown): Promise<string> {
   } catch (err) {
     if (err instanceof ApiError) {
       // 429 — tekin tarif limiti tugagan
-      throw new ProviderError('gemini', err.status === 429 ? 'rate_limit' : err.status === 401 || err.status === 403 ? 'auth' : 'api', err.message);
+      const badKey = err.status === 401 || err.status === 403 || /API_KEY_INVALID|API key not valid/i.test(err.message);
+      throw new ProviderError('gemini', err.status === 429 ? 'rate_limit' : badKey ? 'auth' : 'api', err.message);
     }
     if (err instanceof ProviderError) throw err;
     throw new ProviderError('gemini', 'api', String(err)); // tarmoq xatosi va h.k.

@@ -219,7 +219,8 @@ insofar as|...darajada|поскольку
 hitherto|shu vaqtgacha|до сих пор`,
 };
 
-export const WORDS: Word[] = (Object.keys(RAW) as unknown as StageId[]).flatMap((k) => {
+/** Qo'lda tuzilgan asosiy so'zlar (Starter va har bosqichning eng muhimlari). */
+const BASE: Word[] = (Object.keys(RAW) as unknown as StageId[]).flatMap((k) => {
   const stage = Number(k) as StageId;
   return RAW[stage].trim().split('\n').map((line) => {
     const [en, uz, ru] = line.split('|').map((s) => s.trim());
@@ -227,5 +228,14 @@ export const WORDS: Word[] = (Object.keys(RAW) as unknown as StageId[]).flatMap(
   });
 });
 
+/** Barcha so'zlar: asosiy + serverdan yuklangan CEFR lug'ati (live binding). */
+export let WORDS: Word[] = BASE;
+export let WORD_BY_ID = new Map(WORDS.map((x) => [x.id, x]));
+
+export function setExtraWords(extra: Word[]) {
+  const have = new Set(BASE.map((w) => w.id.toLowerCase()));
+  WORDS = [...BASE, ...extra.filter((w) => !have.has(w.id.toLowerCase()))];
+  WORD_BY_ID = new Map(WORDS.map((x) => [x.id, x]));
+}
+
 export const wordsOfStage = (s: number) => WORDS.filter((x) => x.stage === s);
-export const WORD_BY_ID = new Map(WORDS.map((x) => [x.id, x]));
