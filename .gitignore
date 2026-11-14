@@ -1,4 +1,9 @@
 node_modules
 dist
 dev-dist
+data
+.env
 *.log
+server/node_modules
+server/data
+*.tsbuildinfo

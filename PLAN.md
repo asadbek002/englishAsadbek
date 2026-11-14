@@ -31,7 +31,10 @@ Boshlanish: o'tilgan darajadan keyingi bosqich.
 7. Profil — statistika, sozlamalar, eksport/import
 
 ## Texnik
-React + TypeScript + Vite + vite-plugin-pwa, offline, localStorage, GitHub Pages.
+- Frontend: React + TypeScript + Vite + vite-plugin-pwa (offline, local-first)
+- Backend: Node 22 + Fastify + SQLite, o'z serverda (Docker)
+- AI: Claude API (claude-opus-5-5) — Writing/Speaking baholash, AI ustoz
+- Sinxronlash: last-write-wins (eski nusxa yangisini bosib ketmaydi)
 
 ## Keyingi bosqich
-Backend sinxronlash, AI tekshiruvi (Writing/Speaking), Reading/Listening materiallari, 3000+ so'z.
+Reading matnlari, haqiqiy Listening audiolari, 3000+ so'z, admin panel (kontent qo'shish), push-eslatmalar.
