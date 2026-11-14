@@ -20,16 +20,13 @@ server/     Node 22 + Fastify + SQLite (node:sqlite)
   src/providers/  gemini.ts, claude.ts — AI provayderlari
 ```
 
-## Lokal ishga tushirish
+## Lokal ishga tushirish (Node.js 22.13+)
 ```bash
-npm install && (cd server && npm install)
-cp .env.example .env    # ANTHROPIC_API_KEY va JWT_SECRET ni to'ldiring
+npm run setup           # bog'liqliklarni o'rnatish (bir marta)
+cp .env.example .env    # GEMINI_API_KEY va JWT_SECRET ni to'ldiring
+npm run app             # yig'ish va ishga tushirish → http://localhost:8787
 ```
-Ikki terminalda:
-```bash
-cd server && set -a && . ../.env && set +a && npm run dev     # API: http://localhost:8787
-npm run dev                                                    # Frontend: http://localhost:5173
-```
+Dasturlash rejimi (o'zgarishlar darhol ko'rinadi): bir terminalda `npm run dev:server`, ikkinchisida `npm run dev` → http://localhost:5173
 
 ## O'z serveringizga joylash (Docker)
 ```bash
