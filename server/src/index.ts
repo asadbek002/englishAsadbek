@@ -4,11 +4,10 @@ import fstatic from '@fastify/static';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import * as z from 'zod/v4';
-import Anthropic from '@anthropic-ai/sdk';
-import { config } from './config.ts';
+import { aiEnabled, config } from './config.ts';
 import { db, type UserRow } from './db.ts';
 import { hashPassword, issueToken, requireAuth, verifyPassword } from './auth.ts';
-import { AIRefusal, evaluateSpeaking, evaluateWriting, tutorReply } from './ai.ts';
+import { AIUnavailable, evaluateSpeaking, evaluateWriting, tutorReply } from './ai.ts';
 
 const app = Fastify({ logger: { level: 'info' }, bodyLimit: 2 * 1024 * 1024 });
 await app.register(cors, { origin: config.corsOrigin });
@@ -26,7 +25,7 @@ function parse<T extends z.ZodType>(schema: T, body: unknown): z.infer<T> {
 }
 
 // ───────────── Health ─────────────
-app.get('/api/health', async () => ({ ok: true, ai: config.aiEnabled, model: config.aiEnabled ? config.aiModel : null }));
+app.get('/api/health', async () => ({ ok: true, ai: aiEnabled(), providers: config.aiProviders }));
 
 // ───────────── Auth ─────────────
 const Credentials = z.object({
@@ -96,43 +95,47 @@ function useAiQuota(userId: number): { ok: boolean; left: number } {
 app.register(async (ai) => {
   ai.addHook('preHandler', requireAuth);
   ai.addHook('preHandler', async (req, reply) => {
-    if (!config.aiEnabled) return reply.code(503).send({ error: "AI serverda sozlanmagan (ANTHROPIC_API_KEY yo'q)." });
+    if (!aiEnabled()) return reply.code(503).send({ error: "AI serverda sozlanmagan (GEMINI_API_KEY yoki ANTHROPIC_API_KEY yo'q)." });
     const q = useAiQuota(req.userId!);
     if (!q.ok) return reply.code(429).send({ error: `Bugungi AI limiti (${config.aiDailyLimit} ta) tugadi. Ertaga davom eting.` });
     reply.header('x-ai-left', String(q.left));
   });
 
-  ai.post('/api/ai/writing', async (req) => {
+  ai.post('/api/ai/writing', async (req, reply) => {
     const b = parse(z.object({
       task: z.enum(['task1', 'task2']),
       prompt: z.string().min(10).max(3000),
       text: z.string().min(20, 'Javob juda qisqa').max(12000),
     }), req.body);
-    const result = await evaluateWriting(b.task, b.prompt, b.text);
+    const { data: result, provider } = await evaluateWriting(b.task, b.prompt, b.text);
+    reply.header('x-ai-provider', provider);
     db.prepare('INSERT INTO submissions (user_id, kind, prompt, answer, result, band, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
       .run(req.userId!, 'writing', b.prompt, b.text, JSON.stringify(result), result.overall, Date.now());
     return result;
   });
 
-  ai.post('/api/ai/speaking', async (req) => {
+  ai.post('/api/ai/speaking', async (req, reply) => {
     const b = parse(z.object({
       part: z.number().int().min(1).max(3),
       question: z.string().min(3).max(2000),
       transcript: z.string().min(5, 'Gapirilgan matn topilmadi').max(8000),
       seconds: z.number().min(1).max(600),
     }), req.body);
-    const result = await evaluateSpeaking(b.part, b.question, b.transcript, b.seconds);
+    const { data: result, provider } = await evaluateSpeaking(b.part, b.question, b.transcript, b.seconds);
+    reply.header('x-ai-provider', provider);
     db.prepare('INSERT INTO submissions (user_id, kind, prompt, answer, result, band, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
       .run(req.userId!, 'speaking', b.question, b.transcript, JSON.stringify(result), result.overall, Date.now());
     return result;
   });
 
-  ai.post('/api/ai/tutor', async (req) => {
+  ai.post('/api/ai/tutor', async (req, reply) => {
     const b = parse(z.object({
       level: z.string().max(20).default('A1'),
       messages: z.array(z.object({ role: z.enum(['user', 'assistant']), content: z.string().min(1).max(4000) })).min(1).max(40),
     }), req.body);
-    return { reply: await tutorReply(b.messages, b.level) };
+    const { data, provider } = await tutorReply(b.messages, b.level);
+    reply.header('x-ai-provider', provider);
+    return { reply: data, provider };
   });
 });
 
@@ -144,15 +147,10 @@ app.get('/api/submissions', { preHandler: requireAuth }, async (req) => {
 
 // ───────────── Errors ─────────────
 app.setErrorHandler((err, _req, reply) => {
-  if (err instanceof AIRefusal) return reply.code(422).send({ error: err.message });
-  if (err instanceof Anthropic.RateLimitError) return reply.code(503).send({ error: "AI hozir band. Bir daqiqadan so'ng urinib ko'ring." });
-  if (err instanceof Anthropic.AuthenticationError) {
-    app.log.error(err, 'Anthropic API key invalid');
-    return reply.code(503).send({ error: "AI kaliti noto'g'ri sozlangan." });
-  }
-  if (err instanceof Anthropic.APIError) {
-    app.log.error(err, 'Anthropic API error');
-    return reply.code(502).send({ error: 'AI xizmatida xatolik. Keyinroq urinib ko\'ring.' });
+  if (err instanceof AIUnavailable) {
+    app.log.warn({ providers: err.kinds }, 'all AI providers failed');
+    const limited = err.kinds.every((k) => k.endsWith(':rate_limit'));
+    return reply.code(503).send({ error: limited ? "AI'ning bugungi bepul limiti tugadi. Keyinroq urinib ko'ring." : err.message });
   }
   const status = (err as { statusCode?: number }).statusCode ?? 500;
   if (status >= 500) app.log.error(err);
