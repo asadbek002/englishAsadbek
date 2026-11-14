@@ -1,7 +1,7 @@
 node_modules
 dist
 dev-dist
-data
+/data
 .env
 *.log
 server/node_modules
