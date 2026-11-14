@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from 'react';
 
-export type Dir = 'en-uz' | 'en-ru' | 'uz-en' | 'ru-en' | 'mix';
+/** en-x: inglizcha → o'zbekcha + ruscha; x-en: o'zbekcha + ruscha → inglizcha */
+export type Dir = 'en-x' | 'x-en' | 'mix';
+const DIRS: Dir[] = ['en-x', 'x-en', 'mix'];
 
 export interface WordState { box: number; due: number; seen: number; ok: number; bad: number }
 
@@ -45,13 +47,20 @@ export const initialProgress = (): Progress => ({
   updatedAt: 0,
 });
 
+/** Eski versiyalardagi ma'lumotni joriy formatga keltirish. */
+function normalize(p: Partial<Progress>): Progress {
+  const base = initialProgress();
+  const settings = { ...base.settings, ...p.settings };
+  if (!DIRS.includes(settings.dir)) settings.dir = 'mix'; // eski 'en-uz', 'ru-en' va h.k.
+  return { ...base, ...p, settings } as Progress;
+}
+
 function load(): Progress {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const p = JSON.parse(raw);
-      const base = initialProgress();
-      return { ...base, ...p, settings: { ...base.settings, ...p.settings } };
+      return normalize(p);
     }
   } catch { /* yangi foydalanuvchi */ }
   return initialProgress();
@@ -80,8 +89,7 @@ export function update(fn: (draft: Progress) => void | Progress) {
 
 /** Serverdan kelgan nusxani o'rnatish (sync hook chaqirilmaydi). */
 export function replaceProgress(p: Progress) {
-  const base = initialProgress();
-  state = { ...base, ...p, settings: { ...base.settings, ...p.settings } };
+  state = normalize(p);
   persist();
   listeners.forEach((l) => l());
 }

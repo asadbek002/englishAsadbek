@@ -7,16 +7,15 @@ import { addXp, dayKey, getProgress, update, useProgress, type Dir } from '../li
 import { canSpeak, normalize, sample, shuffle, speak, variants } from '../lib/util';
 
 type Mode = 'cards' | 'quiz' | 'type';
-type Lang = 'en' | 'uz' | 'ru';
+/** x — o'zbekcha va ruscha birga */
+type Lang = 'en' | 'x';
 
 const DIRS: { id: Dir; label: string }[] = [
   { id: 'mix', label: 'Aralash' },
-  { id: 'en-uz', label: 'EN→UZ' },
-  { id: 'en-ru', label: 'EN→RU' },
-  { id: 'uz-en', label: 'UZ→EN' },
-  { id: 'ru-en', label: 'RU→EN' },
+  { id: 'en-x', label: 'EN → UZ·RU' },
+  { id: 'x-en', label: 'UZ·RU → EN' },
 ];
-const FLAG: Record<Lang, string> = { en: 'English', uz: "O'zbekcha", ru: 'Русский' };
+const FLAG: Record<Lang, string> = { en: 'English', x: "O'zbekcha · Русский" };
 
 export function WordsHub() {
   const p = useProgress();
@@ -70,8 +69,8 @@ export function WordsHub() {
 interface Item { word: Word; from: Lang; to: Lang; intro: boolean }
 
 function pickDir(dir: Dir, mode: Mode): [Lang, Lang] {
-  let d = dir === 'mix' ? (['en-uz', 'en-ru', 'uz-en', 'ru-en'] as const)[Math.floor(Math.random() * 4)] : dir;
-  if (mode === 'type' && d.startsWith('en')) d = d === 'en-uz' ? 'uz-en' : 'ru-en';
+  let d = dir === 'mix' ? (Math.random() < 0.5 ? 'en-x' : 'x-en') : dir;
+  if (mode === 'type') d = 'x-en'; // yozish rejimida doim inglizchasini yozasiz
   return d.split('-') as [Lang, Lang];
 }
 
@@ -186,13 +185,24 @@ function Intro({ word, onDone }: { word: Word; onDone: () => void }) {
   );
 }
 
-const text = (w: Word, l: Lang) => w[l];
+const text = (w: Word, l: Lang) => (l === 'en' ? w.en : `${w.uz} — ${w.ru}`);
+
+/** Savol tomoni: inglizcha so'z yoki o'zbekcha (katta) + ruscha (ostida). */
+function Face({ w, lang }: { w: Word; lang: Lang }) {
+  if (lang === 'en') return <div className="q-word">{w.en}</div>;
+  return (
+    <div>
+      <div className="q-word" style={{ fontSize: 28 }}>{w.uz}</div>
+      <div className="muted" style={{ fontSize: 19, fontWeight: 600 }}>{w.ru}</div>
+    </div>
+  );
+}
 
 function Prompt({ item }: { item: Item }) {
   return (
     <div className="stack" style={{ gap: 4, marginBottom: 18 }}>
       <div className="eyebrow">{FLAG[item.from]} → {FLAG[item.to]}</div>
-      <div className="row"><div className="q-word">{text(item.word, item.from)}</div>{item.from === 'en' && <SpeakBtn text={item.word.en} />}</div>
+      <div className="row"><Face w={item.word} lang={item.from} />{item.from === 'en' && <SpeakBtn text={item.word.en} />}</div>
     </div>
   );
 }
@@ -270,7 +280,7 @@ function Flashcard({ item, onAnswer }: { item: Item; onAnswer: (c: boolean) => v
       <div className="eyebrow">{FLAG[item.from]} → {FLAG[item.to]}{item.intro && ' · yangi so\'z'}</div>
       <div className={`flash ${flipped ? 'flipped' : ''}`} onClick={flip} role="button" tabIndex={0} onKeyDown={(e) => (e.key === ' ' || e.key === 'Enter') && flip()} aria-label="Kartochkani ochish">
         <div className="flash-inner">
-          <div className="flash-face"><div><div className="q-word">{text(item.word, item.from)}</div><div className="muted small">Bosing — javobni ko'rish</div></div></div>
+          <div className="flash-face"><div className="stack"><Face w={item.word} lang={item.from} /><div className="muted small">Bosing — javobni ko'rish</div></div></div>
           <div className="flash-face back">
             <div className="stack">
               <div className="q-word" style={{ fontSize: 28 }}>{item.word.en}</div>
